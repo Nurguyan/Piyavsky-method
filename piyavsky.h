@@ -3,13 +3,15 @@
 
 #include <QMainWindow>
 #include <QLine>
-#include "tinyexpr-master/tinyexpr.h"
 #include <QList>
+#include "tinyexpr-master/tinyexpr.h"
+
 
 class Piyavsky
 {
 public:
     double a, b, eps, h, L;
+    bool isMax;
     Piyavsky(QString function,  bool max, double A, double B, double Eps, double H);
     double f(double x);
     void calculate();

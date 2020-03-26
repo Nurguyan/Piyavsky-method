@@ -1,9 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include <QDebug>
-#include <QString>
-#include <QList>
-#include <QMessageBox>
+
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -14,7 +11,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    te_free(expr);
     delete ui;
 }
 
@@ -35,15 +31,14 @@ void MainWindow::on_BT_FIND_clicked()
     const double h = h_str.toDouble();  //Step Ox
 
     if (a > b ) {QMessageBox::critical(0, "Error", "a must be less than b!"); return;}
-
     ui->widget->clearGraphs();
-    parseInputFunction(function);
 
     Piyavsky piyavsky(function, max, a, b, eps, h);
-    piyavsky.calculate();
-    drawGraph(a, b, h);
 
     qDebug() << "Lipschitz constant = " << piyavsky.L;
+
+    drawGraph(&piyavsky, &Piyavsky::f, a, b, h);
+
 
     QList<QLineF> lines = piyavsky.getLines();
     drawBrokenLines(lines);
@@ -68,8 +63,9 @@ void MainWindow::on_BT_FIND_clicked()
     }
 
     ui->ET_PIYAVSKY->setText(QString::number(piyavsky.getGlobalExtremum().y()));
+
     qDebug("Global extremum (Piyavsky method):\nx = %1.2f\ny = %1.2f", piyavsky.getGlobalExtremum().x(), piyavsky.getGlobalExtremum().y());
-    drawPoint(piyavsky.getGlobalExtremum());
+    drawPoint(piyavsky.getGlobalExtremum()); //draw extremum point on the graph
 
     //Подписываем оси Ox и Oy
     ui->widget->xAxis->setLabel("x");
@@ -78,31 +74,15 @@ void MainWindow::on_BT_FIND_clicked()
     ui->widget->replot();
 }
 
-int MainWindow::parseInputFunction(QString function){
-    te_variable vars[] = {{"x", &te_var}};
-    int err = 0;
-    //Compile the expression with variables.
-    expr = te_compile(function.toStdString().c_str(), vars, 1, &err);
-    return err;
-}
-
-double MainWindow::f(double x){
-    if (expr) {
-        te_var = x;
-        return te_eval(expr);
-    }
-    return 0;
-}
-
-void MainWindow::drawGraph(double a, double b, double h){
+void MainWindow::drawGraph(Piyavsky *p, double (Piyavsky::*f)(double),double a, double b, double h){
     int N = (b - a) / h + 2;
     QVector<double> x(N), y(N); //coordinates
-    minY = maxY = f(a);
+    minY = maxY = (p->*f)(a);
     int i = 0;
     for (double X = a; X <= b; X += h)
     {
         x[i] = X;
-        y[i] = f(X);
+        y[i] = (p->*f)(X);
         if (y[i] > maxY) maxY = y[i];
         if (y[i] < minY) minY = y[i];
         i++;

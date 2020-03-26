@@ -1,15 +1,14 @@
 #include "piyavsky.h"
-#include <qdebug.h>
-#include <math.h>
 
 Piyavsky::Piyavsky(QString function, bool max, double A, double B, double Eps, double H){
     parseInputFunction(function);
+    isMax = max;
     a = A;
     b = B;
     eps = Eps;
     h = H;
     L = calculateLipschitzConst();
-    if (max) L *= -1;
+    calculate();
     qDebug("a=%1.2f, b=%1.2f, eps=%1.2f, h=%1.2f", a, b, eps, h);
 }
 
@@ -33,12 +32,6 @@ QList<QLineF> Piyavsky::getLines(){
     return lines;
 }
 
-struct greater
-{
-    template<class T>
-    bool operator()(T const &a, T const &b) const { return a > b; }
-};
-
 void Piyavsky::calculate(){
     extremum.setX(a);
     extremum.setY(f(a));
@@ -53,7 +46,7 @@ void Piyavsky::calculate(){
 
     PIx = getPointIntersection(Lx, Rx);
 
-    double tempY = -L * (PIx-a) + f(Lx);//
+    double tempY = -L * (PIx-a) + f(Lx);
     QLineF line;
 
     line.setLine(Lx, f(Lx), PIx, tempY);
@@ -78,7 +71,7 @@ void Piyavsky::calculate(){
         }
 
         std::sort(g.begin(), g.end());
-        tempY = -L * (PIRx-PIx) + f(PIx);//
+        tempY = -L * (PIRx-PIx) + f(PIx);
 
         line.setLine(Lx, f(Lx), PILx, tempY);
         lines.append(line);
@@ -115,6 +108,7 @@ double Piyavsky::calculateLipschitzConst()
         if(tmpL > l) { l = tmpL; }
     }
     l /= h;
+    if (isMax) l *= -1;
     return l;
 }
 
@@ -126,16 +120,25 @@ double Piyavsky::getPointIntersection(double Lx, double Rx)
 
 int Piyavsky::max_diff(QList<double> list){
     if (list.size() < 3) return 1;
-    double max = abs(f(list[1]) - L * (list[1]-list[0]) + f(list[0]));
-    int imax = 1;
+
+    double compared = 0.5 * L * (list[1] - list[0]) - (f(list[1]) + f(list[0]))/2;
+    int index = 1;
     for (int i = 1; i+2 <= list.size(); i+=2) {
-        double tmp = abs(f(list[i-1]) - L * (list[i]-list[i-1]) + f(list[i-1]));
-        if (tmp > max){
-            imax = i;
-            max = tmp;
+        double tmp = 0.5 * L * (list[i] - list[i-1]) - (f(list[i]) + f(list[i-1]))/2;
+        if (!isMax){
+            if (tmp > compared){
+                index = i;
+                compared = tmp;
+            }
+        }
+        else {
+            if (tmp < compared){
+                index = i;
+                compared = tmp;
+            }
         }
     }
-    return imax;
+    return index;
 }
 
 Piyavsky::~Piyavsky(){

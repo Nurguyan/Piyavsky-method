@@ -57,7 +57,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>sqrt(x) * sin(x)</string>
+         <string>sqrt(x) * sin(x)*cos(2*x)</string>
         </property>
        </widget>
       </item>
